@@ -1,0 +1,1 @@
+# A short example how to work with dynamodb in terraform
