@@ -3,3 +3,6 @@
 
 *.tfstate
 *.tfstate.*
+
+lambdas/node_modules
+lambdas/package-lock.json

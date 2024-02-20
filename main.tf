@@ -44,3 +44,36 @@ resource "aws_dynamodb_table" "tf_notes_table" {
 #   source = "snowplow-devops/dynamodb-autoscaling/aws" // add the autoscaling module
 #   table_name = aws_dynamodb_table.tf_notes_table.name // apply autoscaling for the tf_notes_table
 # }
+
+resource "aws_iam_role" "iam_for_lambda" {
+  name = "iam_for_lambda"
+
+  assume_role_policy = jsonencode({
+    "Version": "2012-10-17",
+    "Statement": [{
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "lambda.amazonaws.com"
+      },
+      "Action": "sts.AssumeRole"
+    }] 
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_policy" {
+  role = aws_iam_role.iam_for_lambda.name
+  policy_arn = "arn:aws:iam:policy/servicerole/AWSLambdaBasicExecutionRole"
+}
+
+resource "aws_iam_role_policy" "dynamodb-lambda-policy" {
+  name = "dynamo_lambda_policy"
+  role = aws_iam_role.iam_for_lambda.id
+  policy = jsonencode({
+    "Version": "2012-10-17",
+    "Statement": [{
+      "Effect": "Allow",
+      "Action": ["dynamodb:*"],
+      "Resource": "${aws_dynamodb_table.tf_notes_table.arn}"
+    }]
+  })
+}
