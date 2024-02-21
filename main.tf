@@ -46,23 +46,25 @@ resource "aws_dynamodb_table" "tf_notes_table" {
 # }
 
 resource "aws_iam_role" "iam_for_lambda" {
-  name = "iam_for_lambda"
+ name = "iam_for_lambda"
 
-  assume_role_policy = jsonencode({
-    "Version": "2012-10-17",
-    "Statement": [{
-      "Effect": "Allow",
-      "Principal": {
-        "Service": "lambda.amazonaws.com"
-      },
-      "Action": "sts.AssumeRole"
-    }] 
+ assume_role_policy = jsonencode({
+   "Version" : "2012-10-17",
+   "Statement" : [
+     {
+       "Effect" : "Allow",
+       "Principal" : {
+         "Service" : "lambda.amazonaws.com"
+       },
+       "Action" : "sts:AssumeRole"
+     }
+   ]
   })
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_policy" {
   role = aws_iam_role.iam_for_lambda.name
-  policy_arn = "arn:aws:iam:policy/servicerole/AWSLambdaBasicExecutionRole"
+  policy_arn = "arn:aws:iam::aws:policy/servicerole/AWSLambdaBasicExecutionRole"
 }
 
 resource "aws_iam_role_policy" "dynamodb-lambda-policy" {
@@ -77,3 +79,64 @@ resource "aws_iam_role_policy" "dynamodb-lambda-policy" {
     }]
   })
 }
+
+data "archive_file" "create-note-archive" {
+ source_file = "lambdas/create-note.js"
+ output_path = "lambdas/create-note.zip"
+ type = "zip"
+}
+
+resource "aws_lambda_function" "create-note" {
+ environment {
+   variables = {
+     NOTES_TABLE = aws_dynamodb_table.tf_notes_table.name
+   }
+ }
+ memory_size = "128"
+ timeout = 10
+ runtime = "nodejs20.x"
+ architectures = ["arm64"]
+ handler = "lambdas/create-note.handler"
+ function_name = "create-note"
+ role = aws_iam_role.iam_for_lambda.arn
+ filename = "lambdas/create-note.zip"
+}
+
+resource "aws_lambda_function" "delete-note" {
+ environment {
+   variables = {
+     NOTES_TABLE = aws_dynamodb_table.tf_notes_table.name
+   }
+ }
+ memory_size = "128"
+ timeout = 10
+ runtime = "nodejs20.x"
+ architectures = ["arm64"]
+ handler = "lambdas/delete-note.handler"
+ function_name = "delete-note"
+ role = aws_iam_role.iam_for_lambda.arn
+ filename = "lambdas/delete-note.zip"
+}
+
+data "archive_file" "get-notes-archive" {
+ source_file = "lambdas/get-notes.js"
+ output_path = "lambdas/get-notes.zip"
+ type = "zip"
+}
+
+resource "aws_lambda_function" "get-notes" {
+ environment {
+   variables = {
+     NOTES_TABLE = aws_dynamodb_table.tf_notes_table.name
+   }
+ }
+ memory_size = "128"
+ timeout = 10
+ runtime = "nodejs20.x"
+ architectures = ["arm64"]
+ handler = "lambdas/get-notes.handler"
+ function_name = "get-notes"
+ role = aws_iam_role.iam_for_lambda.arn
+ filename = "lambdas/get-notes.zip"
+}
+
